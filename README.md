@@ -38,7 +38,6 @@ This will start the application, and you can interact with it through your web b
 
 ## Requirements
 
-Python 3.7+
-Streamlit
-Pandas
-Pillow
+- Python 3.7+
+- Streamlit
+- Pandas
