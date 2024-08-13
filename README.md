@@ -26,7 +26,8 @@ Once the dependencies are installed, you can run the application using the follo
 streamlit run app.py
 ```
 
-**Don't run main.py**
+## Screenshot
+![Sample Image](screenshot.png)
 
 This will start the application, and you can interact with it through your web browser.
 
