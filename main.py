@@ -1,3 +1,5 @@
+"""Full Complete .py file"""
+
 import streamlit as st
 import pandas as pd
 
@@ -73,7 +75,6 @@ class Fitopia:
         self.initialize_default_members()
 
     def initialize_default_members(self) -> None:
-
         member_a_details = {
             "name": "Jack Ma",
             "contact_num": "0930-144-111",
@@ -82,7 +83,6 @@ class Fitopia:
             "photo": "memberA.jpg",
         }
 
-        # member_a = Member.create_membership(member_a_details, 1)
         member_a = Member(
             member_id=1,
             **member_a_details,
@@ -96,7 +96,6 @@ class Fitopia:
             "membership_type": "Pay-as-you-go",
             "photo": "memberB.png",
         }
-        # member_b = Member.create_membership(member_b_details, 2)
         member_b = Member(member_id=2, **member_b_details)
         self.add_member(member_b)
 
@@ -214,10 +213,26 @@ def add_member_balance():
 
 def view_member_details():
     """
-    This function views the member's details, details includes every attribute in the member instance
+    This function views the member's details, including their current balance if applicable.
     """
-
-    raise NotImplemented
+    with st.expander("View Member Details"):
+        contact_num = st.text_input("Enter Contact Number of Member to View Details")
+        if contact_num:  # Only process if the contact number is entered
+            member = st.session_state.fitopia.get_member_by_contact_number(contact_num)
+            if member:
+                st.write(f"**Member ID:** {member.member_id}")
+                st.write(f"**Name:** {member.name}")
+                st.write(f"**Contact Number:** {member.contact_num}")
+                st.write(f"**Email:** {member.email}")
+                st.write(f"**Membership Type:** {member.membership_type}")
+                if member.membership_type == "Pay-as-you-go":
+                    st.write(f"**Current Balance:** ${member.current_balance}")
+                if member.photo:
+                    st.image(
+                        member.photo, caption="Member Photo", use_column_width=True
+                    )
+            else:
+                st.error(f"No member found with Contact Number {contact_num}")
 
 
 # Main Streamlit app function
@@ -258,20 +273,23 @@ def main():
         else:
             st.sidebar.error("Please fill out all fields.")
 
-    # Layout for editing member info and adding balance
-    col1, col2 = st.columns(2)
+    # Layout for editing member info, viewing member details, and adding balance
+    col1, col2, col3 = st.columns(3)
     with col1:
         edit_member_basic_info()
+        # view_member_details()
     with col2:
         add_member_balance()
+    with col3:
+        view_member_details()
 
     # Show members
-    if st.toggle("List of Members"):
+    if st.toggle("List Members"):
         st.header("Current Members")
         members_df = st.session_state.fitopia.list_members()
         st.dataframe(members_df)
 
-    if st.toggle("Show Members"):
+    if st.toggle("或是這樣看"):
         st.session_state.fitopia.show_members()
 
 
