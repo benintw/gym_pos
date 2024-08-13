@@ -1,7 +1,7 @@
 # Streamlit functions for UI (e.g., edit_member_basic_info, view_member_details)
-
 import streamlit as st
-import pandas as pd
+from fitopia.fitopia import Fitopia
+from fitopia.member import Member
 
 
 def edit_member_basic_info():
@@ -11,21 +11,24 @@ def edit_member_basic_info():
     with st.expander("Edit Member Info"):
         contact_num = st.text_input("Enter Contact Number of Member to Edit")
         if contact_num:  # Only process if the contact number is entered
-            member = st.session_state.fitopia.get_member_by_contact_number(contact_num)
+            member = Fitopia().get_member_by_contact(contact_num)
             if member:
-                st.write("Editing Member:", member.name)
+                st.write("Editing Member:", member[1])
+                new_name = st.text_input("New Name", value=member[1])
+                new_contact_num = st.text_input("New Contact Number", value=member[2])
+                new_email = st.text_input("New Email", value=member[3])
+                new_membership_type = st.selectbox("New Membership Type", ["Pay-as-you-go", "Monthly", "Yearly"], index=["Pay-as-you-go", "Monthly", "Yearly"].index(member[4]))
 
-                # Use st.data_editor to edit the member's basic information
-                member_df = pd.DataFrame([member.to_dict()])
-                edited_member_df = st.data_editor(member_df, num_rows="fixed")
+                # Handle membership duration
+                new_membership_duration = member[6]  # Keep the existing duration
+                if new_membership_type != "Pay-as-you-go":
+                    new_membership_duration = st.text_input("New Membership Duration", value=member[6], placeholder="YYYY-MM-DD to YYYY-MM-DD")
+
+                new_photo = st.file_uploader("Upload New Photo", type=["png", "jpg", "jpeg"])
 
                 # Update the member with edited data
                 if st.button("Save Changes"):
-                    edited_member_data = edited_member_df.iloc[0].to_dict()
-                    member.name = edited_member_data["Name"]
-                    member.contact_num = edited_member_data["Contact Number"]
-                    member.email = edited_member_data["Email"]
-                    member.photo = edited_member_data["Photo"]
+                    Member.update_member(contact_num, new_name, new_contact_num, new_email, new_membership_duration, new_photo)
                     st.success(f"Member {contact_num} info updated successfully!")
             else:
                 st.error(f"No member found with Contact Number {contact_num}")
@@ -38,20 +41,17 @@ def add_member_balance():
     with st.expander("Add Member Balance"):
         contact_num = st.text_input("Enter Contact Number of Member to Add Balance")
         if contact_num:  # Only process if the contact number is entered
-            member = st.session_state.fitopia.get_member_by_contact_number(contact_num)
-            if member and member.membership_type == "Pay-as-you-go":
-                st.write(f"Current Balance: ${member.current_balance}")
+            member = Fitopia().get_member_by_contact(contact_num)
+            if member:
+                st.write(f"Current Balance: ${member[7]}")
                 amount_to_add = st.number_input("Enter amount to add", min_value=0)
 
                 if st.button("Add Balance"):
-                    member.current_balance += amount_to_add
+                    Fitopia().update_member_balance(contact_num, amount_to_add)
                     st.success(
-                        f"${amount_to_add} added. New Balance: ${member.current_balance}"
+                        f"${amount_to_add} added. New Balance: ${member[7] + amount_to_add}"
                     )
-            elif member:
-                st.error(
-                    f"Member {member.name} does not have a Pay-as-you-go membership type."
-                )
+
             else:
                 st.error(f"No member found with Contact Number {contact_num}")
 
@@ -63,18 +63,16 @@ def view_member_details():
     with st.expander("View Member Details"):
         contact_num = st.text_input("Enter Contact Number of Member to View Details")
         if contact_num:  # Only process if the contact number is entered
-            member = st.session_state.fitopia.get_member_by_contact_number(contact_num)
+            member = Fitopia().get_member_by_contact(contact_num)
             if member:
-                st.write(f"**Member ID:** {member.member_id}")
-                st.write(f"**Name:** {member.name}")
-                st.write(f"**Contact Number:** {member.contact_num}")
-                st.write(f"**Email:** {member.email}")
-                st.write(f"**Membership Type:** {member.membership_type}")
-                if member.membership_type == "Pay-as-you-go":
-                    st.write(f"**Current Balance:** ${member.current_balance}")
-                if member.photo:
-                    st.image(
-                        member.photo, caption="Member Photo", use_column_width=True
-                    )
+                st.write(f"**Member ID:** {member[0]}")
+                st.write(f"**Name:** {member[1]}")
+                st.write(f"**Contact Number:** {member[2]}")
+                st.write(f"**Email:** {member[3]}")
+                st.write(f"**Membership Type:** {member[4]}")
+                st.write(f"**Membership Duration:** {member[6]}")
+                st.write(f"**Current Balance:** ${member[7]}")
+                if member[8]:
+                    st.image(member[8], caption="Member Photo", use_column_width=True)
             else:
                 st.error(f"No member found with Contact Number {contact_num}")

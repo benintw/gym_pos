@@ -8,14 +8,40 @@ from fitopia.views import (
     view_member_details,
 )
 
-
 def main():
     st.title("Welcome to FITOPIA")
 
     # Initialize Fitopia and member ID counter in session state if they don't exist
     if "fitopia" not in st.session_state:
         st.session_state.fitopia = Fitopia()
-        st.session_state.member_id_counter = 3
+
+    # # Show members
+    # if st.button("List Members"):
+    #     st.header("Current Members")
+    #     _, members_df = st.session_state.fitopia.list_members()
+    #     st.dataframe(members_df)
+
+    # if st.button("Show Member Details"):
+    #     st.session_state.fitopia.show_members()
+
+    # Create tabs for "List Members" and "Show Member Details"
+    tabs = st.tabs(["場內會員", "List Members", "Show Member Details"])
+
+    with tabs[0]:
+        st.markdown("### 這邊會顯示目前場內會員資訊")
+        st.write("=" * 30 )
+        st.markdown("#### 誰誰誰A在場內 - 入場時間 - 持續時間")
+        st.markdown("#### 誰誰誰B在場內 - 入場時間 - 持續時間")
+        st.write("="* 30 )
+    with tabs[1]:
+        st.header("All Members")
+        _, members_df = st.session_state.fitopia.list_members()
+        st.dataframe(members_df)
+
+    with tabs[2]:
+        st.header("All Members")
+        st.session_state.fitopia.show_members()
+
 
     # New input
     st.sidebar.header("Add New Member")
@@ -25,6 +51,15 @@ def main():
     membership_type = st.sidebar.selectbox(
         "Membership Type", ["Pay-as-you-go", "Monthly", "Yearly"]
     )
+    
+    membership_duration = "Forever"  # Default for Pay-as-you-go
+    # Show duration inputs only for Monthly or Yearly memberships
+    if membership_type in ["Monthly", "Yearly"]:
+        duration_from = st.sidebar.date_input("Duration FROM")
+        duration_ends = st.sidebar.date_input("Duration ENDS")
+        if duration_from and duration_ends:
+            membership_duration = f"{duration_from} to {duration_ends}"
+            
     photo = st.sidebar.file_uploader("Upload Photo", type=["png", "jpg", "jpeg"])
 
     # Add member
@@ -35,10 +70,10 @@ def main():
                 "contact_num": contact_num,
                 "email": email,
                 "membership_type": membership_type,
+                "membership_duration": membership_duration,
                 "photo": photo,
             }
-            new_member = st.session_state.fitopia.add_new_member(member_details)
-            st.session_state.member_id_counter += 1  # Increment the member ID counter
+            st.session_state.fitopia.add_new_member(member_details)
             st.sidebar.success(f"Member {name} added successfully!")
         else:
             st.sidebar.error("Please fill out all fields.")
@@ -51,16 +86,6 @@ def main():
         add_member_balance()
     with col3:
         view_member_details()
-
-    # Show members
-    if st.toggle("List Members"):
-        st.header("Current Members")
-        members_df = st.session_state.fitopia.list_members()
-        st.dataframe(members_df)
-
-    if st.toggle("Show Member Details"):
-        st.session_state.fitopia.show_members()
-
 
 if __name__ == "__main__":
     main()

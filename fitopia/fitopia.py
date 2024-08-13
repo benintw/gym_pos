@@ -8,59 +8,54 @@ from fitopia.member import Member
 class Fitopia:
     def __init__(self):
         self.members = []
-        self.initialize_default_members()
 
-    def initialize_default_members(self) -> None:
-        member_a_details = {
-            "name": "Jack Ma",
-            "contact_num": "0930-144-111",
-            "email": "abcd@gmail.com",
-            "membership_type": "Pay-as-you-go",
-            "photo": "memberA.jpg",
-        }
-        member_a = Member(member_id=1, **member_a_details)
-        self.add_member(member_a)
-
-        member_b_details = {
-            "name": "Samuel Cho",
-            "contact_num": "0930-333-222",
-            "email": "lklklk@gmail.com",
-            "membership_type": "Pay-as-you-go",
-            "photo": "memberB.png",
-        }
-        member_b = Member(member_id=2, **member_b_details)
-        self.add_member(member_b)
-
-    def add_member(self, member: Member) -> None:
-        self.members.append(member)
-
-    def add_new_member(self, member_details: dict) -> Member:
-        member = Member.create_membership(member_details, len(self.members) + 1)
-        self.add_member(member)
-        return member
-
-    def to_dataframe(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [
-                {k: v for k, v in member.to_dict().items() if k != "Photo"}
-                for member in self.members
-            ]
+    def add_new_member(self, member_details):
+        member = Member.add_member(
+            member_details["name"],
+            member_details["contact_num"],
+            member_details["email"],
+            member_details["membership_type"],
+            member_details["membership_duration"],
+            member_details.get("photo")
         )
-
-    def get_member_by_contact_number(self, contact_num) -> Member:
-        for member in self.members:
-            if member.contact_num == contact_num:
-                return member
-        return None
-
-    def list_members(self) -> pd.DataFrame:
-        return self.to_dataframe()
+        self.members.append(member)
+    
+    def list_members(self):
+        members_data = Member.get_all_members()
+        
+        # Convert the data to a DataFrame
+        members_df = pd.DataFrame(members_data, columns=[
+            "Member ID", "Name", "Contact Number", "Email",
+            "Membership Type", "Membership Duration", "Current Balance", "Photo"
+        ])
+        
+        return members_data, members_df
+    
+    def update_member_balance(self, contact_num, amount):
+        Member.update_member_balance(contact_num, amount)
+    
+    def get_member_by_contact(self, contact_num):
+        return Member.get_member_by_contact(contact_num)
 
     def show_members(self) -> None:
         """
         This method lists all members in the system.
         """
-        for member in self.members:
+        members_data, _ = self.list_members()
+        for member_data in members_data:
+            member_id, name, contact_num, email, membership_type, membership_duration, current_balance, photo = member_data
+            
+            member = Member(
+                member_id=member_id,
+                name=name,
+                contact_num=contact_num,
+                email=email,
+                membership_type=membership_type,
+                membership_duration=membership_duration,
+                photo=photo
+            )
+            member.current_balance = current_balance
+
             with st.container():
                 cols = st.columns([1, 3])  # Adjust the column width ratios as needed
                 if member.photo:
@@ -85,7 +80,9 @@ class Fitopia:
 
                     **Membership Type:** {member.membership_type}
 
-                    {"**Current Balance:** $" + str(member.current_balance) if member.membership_type == "Pay-as-you-go" else ""}
+                    **Membership Duration:** {member.membership_duration}
+
+                    {"**Current Balance:** $" + str(member.current_balance)}
                     """
                 )
                 st.text("-" * 20)
