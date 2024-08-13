@@ -1,28 +1,6 @@
 """
 env: gym_pos
-
-This is the one .py that contains everything ... for now.
 """
-
-"""Create membership
-
-A member has:
-
-- name (LastName + FirstName)
-- contact number: 0922 222 222
-- email: abc@gmail.com
-- membership_type:
-
-  1. pay-as-you-go
-     1.1 initial_balance: $ 100
-     1.2 balance_history: $ 100 at dateA, $300 at dateB, ... etc
-  2. monthly subscription
-     subscription start-end: 2024-Jan-31 TO 2024-Feb-31
-  3. Yearly subscription
-     subscription start-end: 2024-Jan-31 TO 2025-Jan-31
-
-- photo x 1
-  """
 
 ## 人臉辨識應用最新趨勢，5 大領域一次了解！【2024 最新版】
 
