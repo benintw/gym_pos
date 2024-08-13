@@ -82,7 +82,11 @@ class Fitopia:
             "photo": "memberA.jpg",
         }
 
-        member_a = Member.create_membership(member_a_details, 1)
+        # member_a = Member.create_membership(member_a_details, 1)
+        member_a = Member(
+            member_id=1,
+            **member_a_details,
+        )
         self.add_member(member_a)
 
         member_b_details = {
@@ -92,11 +96,15 @@ class Fitopia:
             "membership_type": "Pay-as-you-go",
             "photo": "memberB.png",
         }
-        member_b = Member.create_membership(member_b_details, 2)
+        # member_b = Member.create_membership(member_b_details, 2)
+        member_b = Member(member_id=2, **member_b_details)
         self.add_member(member_b)
 
     def add_member(self, member: Member) -> None:
         self.members.append(member)
+
+    def to_dataframe(self) -> pd.DataFrame:
+        return pd.DataFrame([member.to_dict() for member in self.members])
 
     @property
     def num_members(self) -> int:
@@ -108,7 +116,10 @@ class Fitopia:
                 return member
         return None
 
-    def list_members(self) -> None:
+    def list_members(self) -> pd.DataFrame:
+        return self.to_dataframe()
+
+    def show_members(self) -> None:
         """
         This method lists all members in the system.
         """
@@ -128,15 +139,15 @@ class Fitopia:
                 cols[1].markdown(
                     f"""
                     **Member ID:** {member.member_id}
-                    
+
                     **Name:** {member.name}
-                    
+
                     **Contact Number:** {member.contact_num}
-                    
+
                     **Email:** {member.email}
-                    
+
                     **Membership Type:** {member.membership_type}
-                    
+
                     {"**Current Balance:** $" + str(member.current_balance) if member.membership_type == "Pay-as-you-go" else ""}
                     """
                 )
@@ -155,20 +166,18 @@ def edit_member_basic_info():
             member = st.session_state.fitopia.get_member_by_contact_number(contact_num)
             if member:
                 st.write("Editing Member:", member.name)
-                new_name = st.text_input("New Name", value=member.name)
-                new_contact_num = st.text_input(
-                    "New Contact Number", value=member.contact_num
-                )
-                new_email = st.text_input("New Email", value=member.email)
-                new_photo = st.file_uploader(
-                    "Upload New Photo", type=["png", "jpg", "jpeg"]
-                )
 
+                # Use st.data_editor to edit the member's basic information
+                member_df = pd.DataFrame([member.to_dict()])
+                edited_member_df = st.data_editor(member_df, num_rows="fixed")
+
+                # Update the member with edited data
                 if st.button("Save Changes"):
-                    member.name = new_name
-                    member.contact_num = new_contact_num
-                    member.email = new_email
-                    member.photo = new_photo if new_photo else member.photo
+                    edited_member_data = edited_member_df.iloc[0].to_dict()
+                    member.name = edited_member_data["Name"]
+                    member.contact_num = edited_member_data["Contact Number"]
+                    member.email = edited_member_data["Email"]
+                    member.photo = edited_member_data["Photo"]
                     st.success(f"Member {contact_num} info updated successfully!")
             else:
                 st.error(f"No member found with Contact Number {contact_num}")
@@ -180,11 +189,6 @@ def add_member_balance():
 
     member's can come to the staff and asks to deposit money to the balance.
     The gym charges $1 dolloar per minute.
-
-    For example:
-    Sam's current balance: $100. Sam deposits $500 to his account, so now he has $600 which is 600 minutes.
-
-    This account balance can only be added, ie. a positive increment change.
 
     """
     with st.expander("Add Member Balance"):
@@ -200,13 +204,20 @@ def add_member_balance():
                     st.success(
                         f"${amount_to_add} added. New Balance: ${member.current_balance}"
                     )
-
             elif member:
                 st.error(
                     f"Member {member.name} does not have a Pay-as-you-go membership type."
                 )
             else:
                 st.error(f"No member found with Contact Number {contact_num}")
+
+
+def view_member_details():
+    """
+    This function views the member's details, details includes every attribute in the member instance
+    """
+
+    raise NotImplemented
 
 
 # Main Streamlit app function
@@ -255,9 +266,13 @@ def main():
         add_member_balance()
 
     # Show members
-    if st.button("Show Members"):
+    if st.toggle("List of Members"):
         st.header("Current Members")
-        st.session_state.fitopia.list_members()
+        members_df = st.session_state.fitopia.list_members()
+        st.dataframe(members_df)
+
+    if st.toggle("Show Members"):
+        st.session_state.fitopia.show_members()
 
 
 if __name__ == "__main__":
