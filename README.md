@@ -23,8 +23,10 @@ pip install streamlit pandas pillow
 Once the dependencies are installed, you can run the application using the following command:
 
 ```bash
-streamlit run fitopia.py
+streamlit run app.py
 ```
+
+**Don't run main.py**
 
 This will start the application, and you can interact with it through your web browser.
 
