@@ -58,15 +58,6 @@ def main():
         if st.sidebar.button("View Member Details"):
             view_member_details_dialog()
 
-        # # Layout for editing member info, viewing member details, and adding balance
-        # col1, col2, col3 = st.columns(3)
-        # with col1:
-        #     edit_member_basic_info()
-        # with col2:
-        #     add_member_balance()
-        # with col3:
-        #     view_member_details()
-
     elif choice == "庫存管理":
         inventory_management()
 

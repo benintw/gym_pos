@@ -1,6 +1,6 @@
-"""database.py for database storage"""
-
 import sqlite3
+from datetime import datetime
+import pytz
 
 
 def get_connection():
@@ -8,7 +8,7 @@ def get_connection():
     return conn
 
 
-def create_tables():
+def create_members_table():
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -22,13 +22,21 @@ def create_tables():
         membership_duration TEXT NOT NULL,
         current_balance INT DEFAULT 0,
         photo BLOB,
-        creation_datetime TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP -- Add this line to record the creation date and time
+        creation_datetime TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     """
-
     cursor.execute(create_table_query)
+    conn.commit()
+    conn.close()
 
     # Insert default members
+    insert_default_members()
+
+
+def insert_default_members():
+    conn = get_connection()
+    cursor = conn.cursor()
+
     default_members = [
         (
             "Jack Ma",
@@ -53,14 +61,20 @@ def create_tables():
     VALUES (?, ?, ?, ?, ?, ?)
     """
 
-    # Only insert if not already in the database
     for member in default_members:
         cursor.execute("SELECT * FROM members WHERE contact_num = ?", (member[1],))
         if not cursor.fetchone():
             cursor.execute(insert_member_query, member)
 
-    # Create table for inventory
-    create_inventory_table_query = """
+    conn.commit()
+    conn.close()
+
+
+def create_inventory_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    create_table_query = """
     CREATE TABLE IF NOT EXISTS inventory(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         equipment_name TEXT NOT NULL,
@@ -70,11 +84,34 @@ def create_tables():
         status TEXT CHECK(status IN ('available', 'in maintenance', 'out of order')) NOT NULL
     );
     """
-
-    cursor.execute(create_inventory_table_query)
-
+    cursor.execute(create_table_query)
     conn.commit()
     conn.close()
+
+
+def create_gym_visits_table():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS gym_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        member_id INTEGER NOT NULL,
+        entry_time DATETIME NOT NULL,
+        exit_time DATETIME,
+        duration_minutes INTEGER,
+        FOREIGN KEY (member_id) REFERENCES members(id)
+    );
+    """
+    cursor.execute(create_table_query)
+    conn.commit()
+    conn.close()
+
+
+def create_all_tables():
+    create_members_table()
+    create_inventory_table()
+    create_gym_visits_table()
 
 
 def add_member(
@@ -82,6 +119,7 @@ def add_member(
 ):
     conn = get_connection()
     cursor = conn.cursor()
+
     insert_query = """
     INSERT INTO members (name, contact_num, email, membership_type, membership_duration, photo)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -97,6 +135,7 @@ def add_member(
 def add_equipment(equipment_name, description, quantity, last_maintenance_date, status):
     conn = get_connection()
     cursor = conn.cursor()
+
     insert_query = """
     INSERT INTO inventory (equipment_name, description, quantity, last_maintenance_date, status)
     VALUES (?, ?, ?, ?, ?)
@@ -112,6 +151,7 @@ def add_equipment(equipment_name, description, quantity, last_maintenance_date, 
 def update_equipment_status(equipment_id, status):
     conn = get_connection()
     cursor = conn.cursor()
+
     update_query = """
     UPDATE inventory
     SET status = ?
@@ -131,5 +171,65 @@ def get_all_inventory():
     return inventory
 
 
-# Initialize the database when this module is imported
-create_tables()
+def record_entry(member_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    local_timezone = pytz.timezone("Asia/Taipei")
+    entry_time = datetime.now(local_timezone)
+
+    insert_query = """
+    INSERT INTO gym_visits (member_id, entry_time)
+    VALUES (?, ?)
+    """
+    cursor.execute(insert_query, (member_id, entry_time))
+    conn.commit()
+    conn.close()
+
+
+def record_exit(member_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    local_timezone = pytz.timezone("Asia/Taipei")
+    exit_time = datetime.now(local_timezone)
+
+    cursor.execute(
+        "SELECT id, entry_time FROM gym_visits WHERE member_id = ? AND exit_time IS NULL",
+        (member_id,),
+    )
+    visit = cursor.fetchone()
+
+    if visit:
+        visit_id, entry_time = visit
+        duration_minutes = (
+            exit_time - datetime.fromisoformat(entry_time)
+        ).seconds // 60
+
+        update_query = """
+        UPDATE gym_visits
+        SET exit_time = ?, duration_minutes = ?
+        WHERE id = ?
+        """
+        cursor.execute(update_query, (exit_time, duration_minutes, visit_id))
+
+        cursor.execute(
+            "SELECT membership_type, current_balance FROM members WHERE id = ?",
+            (member_id,),
+        )
+        membership_type, current_balance = cursor.fetchone()
+
+        if membership_type == "Pay-as-you-go" and current_balance is not None:
+            new_balance = max(0, current_balance - duration_minutes)
+            cursor.execute(
+                "UPDATE members SET current_balance = ? WHERE id = ?",
+                (new_balance, member_id),
+            )
+
+        conn.commit()
+
+    conn.close()
+
+
+# Initialize all tables when the module is imported
+create_all_tables()
